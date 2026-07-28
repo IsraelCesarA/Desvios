@@ -25,6 +25,8 @@
                         bus: '#2563eb',
                         parada: '#C2185B',
                         colabora: '#7B1FA2',
+                        problemaFixo: '#ffcc00',
+                        problemaDia: '#F57C00',
                     }
                 }
             }
@@ -66,7 +68,7 @@
             </div>
 
             <div class="space-y-5">
-                <!-- 🚌 CONSULTA DE ROTAS (ADICIONADO) -->
+                <!-- 🚌 CONSULTA DE ROTAS (FUNCIONANDO) -->
                 <div class="bg-white rounded-xl shadow-md p-5">
                     <h2 class="text-lg font-bold text-bus mb-4"><i class="fa fa-bus mr-2"></i> Consultar Rota</h2>
                     <div class="space-y-3">
@@ -89,7 +91,7 @@
                     </div>
                 </div>
 
-                <!-- 🚏 CADASTRAR PARADA (ORIGINAL) -->
+                <!-- 🚏 CADASTRAR PARADA -->
                 <div class="bg-white rounded-xl shadow-md p-5">
                     <h2 class="text-lg font-bold text-parada mb-4"><i class="fa fa-map-pin mr-2"></i> Cadastrar Parada</h2>
                     <input type="text" id="nome-parada" placeholder="Nome da parada" class="w-full p-2 border rounded-lg text-sm mb-2">
@@ -100,11 +102,42 @@
                     <button id="btn-salvar-parada" class="w-full bg-parada text-white py-2 rounded-lg text-sm">🚏 Salvar</button>
                 </div>
 
-                <!-- 🚨 RELATOS (ORIGINAL) -->
-                <div class="bg-white rounded-xl shadow-md p-5">
-                    <h2 class="text-lg font-bold text-colabora mb-4"><i class="fa fa-exclamation-triangle mr-2"></i> Relatar Problema</h2>
-                    <textarea id="descricao-problema" placeholder="Descreva..." class="w-full p-2 border rounded-lg text-sm h-16"></textarea>
-                    <button id="btn-adicionar-problema" class="w-full bg-colabora text-white py-2 rounded-lg mt-2 text-sm">🚨 Salvar</button>
+                <!-- 🚨 RELATOS (COMPLETO COM FIXO E TEMPORÁRIO) -->
+                <div id="painel-colabora" class="bg-white rounded-xl shadow-md p-5">
+                    <h2 class="text-lg font-bold text-colabora flex items-center mb-4">
+                        <i class="fa fa-exclamation-triangle mr-2"></i> Relatar Problema
+                    </h2>
+                    <p class="text-sm text-gray-600 mb-3">Clique no mapa primeiro para definir o local:</p>
+
+                    <div class="space-y-3 mb-4">
+                        <label class="flex items-center gap-2 p-2 border rounded-lg hover:bg-gray-50 cursor-pointer">
+                            <input type="radio" name="tipo-problema" value="fixo" checked>
+                            <div>
+                                <div class="font-medium">🚧 Problema Fixo / Obra</div>
+                                <div class="text-xs text-gray-500">Fica salvo até ser removido manualmente</div>
+                            </div>
+                        </label>
+                        <label class="flex items-center gap-2 p-2 border rounded-lg hover:bg-gray-50 cursor-pointer">
+                            <input type="radio" name="tipo-problema" value="diario">
+                            <div>
+                                <div class="font-medium">💥 Ocorrência do Dia</div>
+                                <div class="text-xs text-gray-500">Acidente, bloqueio — apaga automaticamente à meia-noite</div>
+                            </div>
+                        </label>
+                    </div>
+
+                    <textarea id="descricao-problema" placeholder="Descreva o problema..." class="w-full p-2 border rounded-lg text-sm h-20"></textarea>
+
+                    <button id="btn-adicionar-problema" class="w-full mt-3 bg-colabora text-white py-2 rounded-lg hover:bg-opacity-90">
+                        📍 Salvar Relato
+                    </button>
+
+                    <div class="mt-4 pt-3 border-t border-gray-200">
+                        <h3 class="font-semibold text-sm mb-2">📋 Relatos Ativos</h3>
+                        <div id="lista-relatos" class="text-sm space-y-1 max-h-32 overflow-y-auto">
+                            <p class="text-gray-500 text-xs">Carregando...</p>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
