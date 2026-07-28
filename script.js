@@ -1,12 +1,28 @@
 // ==============================================
-// ⚠️ DADOS DO SUPABASE
+// ⚠️ DADOS DO SEU SUPABASE
 // ==============================================
 const SUPABASE_URL = "https://SEU_PROJETO.supabase.co";
 const SUPABASE_KEY = "SUA_CHAVE_ANON";
 const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 // ==============================================
-// 🚍 CONFIGURAÇÕES DE ROTAS (FUNCIONANDO)
+// 📝 MOTIVOS PADRÃO
+// ==============================================
+const MOTIVOS_PADRAO = [
+    "Colisão",
+    "Obra da Cagece",
+    "Serviço Enel",
+    "Feira",
+    "Manifestação",
+    "Via Acidentada",
+    "Poda de Árvore",
+    "Ação Policial",
+    "Ação AMC",
+    "Festas Juninas"
+];
+
+// ==============================================
+// 🚍 ROTAS
 // ==============================================
 const API_ITINERARIO = "https://info-bus-fortaleza.vercel.app/api/pontos-itinerarios/";
 const MAX_TENTATIVAS = 5;
@@ -14,15 +30,16 @@ const TEMPO_ESPERA = 1000;
 let rotaDesenhada = null;
 
 // ==============================================
-// 🗺️ MAPA E CONFIGURAÇÕES GERAIS
+// 🗺️ MAPA E FILTROS
 // ==============================================
 const mapa = L.map('mapa').setView([-3.7327, -38.5270], 13);
 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OpenStreetMap' }).addTo(mapa);
-const RAIO_METROS = 5;
-let camadasParadas = [], camadasRelatos = [], pontoClicado = null;
+let camadasDesvios = [], pontoClicado = null;
+let todosOsDesvios = [];
+let filtroAtual = { tipo: 'todos', motivo: '', linha: '' };
 
 // ==============================================
-// 🔄 FUNÇÃO DE BUSCA DE ROTAS
+// 🔄 BUSCA DE ROTAS
 // ==============================================
 async function buscarComTentativas(url, tentativa = 1) {
     try {
@@ -86,126 +103,182 @@ async function carregarRota(forcar = false) {
 }
 
 // ==============================================
-// 🚨 SISTEMA DE RELATOS RESTAURADO COMPLETO
+// 🚨 DESVIOS E FILTROS
 // ==============================================
-function desenharRelato(r) {
-    const cor = r.tipo === 'fixo' ? '#ffcc00' : '#F57C00';
-    const circulo = L.circle([r.lat, r.lng], {
-        color: '#B71C1C', fillColor: cor, fillOpacity: 0.6, radius: RAIO_METROS
+function desenharDesvio(d) {
+    const cor = d.tipo === 'provisorio' ? '#F57C00' : '#D32F2F';
+    const marcador = L.circle([d.lat, d.lng], {
+        color: cor, fillColor: cor, fillOpacity: 0.5, radius: 8
     }).addTo(mapa);
 
-    circulo.bindPopup(`
-        <strong>${r.tipo === 'fixo' ? '🚧 Problema Fixo' : '💥 Ocorrência do Dia'}</strong><br>
-        ${r.descricao}<br>
-        <button onclick="removerRelato(${r.id})" style="color:red; font-size:11px; border:none; background:none; cursor:pointer; font-weight:bold;">❌ REMOVER</button>
+    marcador.bindPopup(`
+        <strong>${d.tipo === 'provisorio' ? '🟡 Provisório' : '🔴 Permanente'}</strong><br>
+        <strong>Linhas:</strong> ${d.linhas_afetadas}<br>
+        <strong>Motivo:</strong> ${d.motivo}<br>
+        <strong>Horário:</strong> ${d.horario_inicio} às ${d.horario_final}<br>
+        <button onclick="removerDesvio(${d.id})" style="color:red; font-size:11px; margin-top:5px;">❌ Remover</button>
     `);
-    circulo.id = r.id;
-    camadasRelatos.push(circulo);
+    camadasDesvios.push(marcador);
 }
 
-async function salvarRelato() {
-    if (!pontoClicado) return alert("❗ Primeiro clique no mapa para definir o local!");
-    
-    const tipo = document.querySelector('input[name="tipo-problema"]:checked').value;
-    const descricao = document.getElementById('descricao-problema').value.trim() || 
-        (tipo === 'fixo' ? 'Problema Fixo / Obra' : 'Ocorrência do Dia');
+// ATUALIZA LISTAS DE MOTIVOS
+function atualizarListaMotivos() {
+    const filtroSelect = document.getElementById('filtro-motivo');
+    const cadastroSelect = document.getElementById('motivo-lista');
+    const atualFiltro = filtroAtual.motivo;
 
-    await supabaseClient.from('relatos').insert([{
-        tipo, lat: pontoClicado.lat, lng: pontoClicado.lng, descricao, data: new Date()
-    }]);
+    // Junta padrões + cadastrados, sem duplicatas
+    const todosMotivos = [...new Set([...MOTIVOS_PADRAO, ...todosOsDesvios.map(d => d.motivo)])].sort();
 
-    alert("✅ Relato salvo!");
-    document.getElementById('descricao-problema').value = '';
-    pontoClicado = null;
-    carregarRelatos();
-}
+    // Atualiza filtro
+    filtroSelect.innerHTML = `<option value="">Todos os motivos</option>`;
+    todosMotivos.forEach(m => {
+        const opt = document.createElement('option');
+        opt.value = m;
+        opt.textContent = m;
+        if (m === atualFiltro) opt.selected = true;
+        filtroSelect.appendChild(opt);
+    });
 
-async function removerRelato(id) {
-    if (!confirm("Remover este relato?")) return;
-    await supabaseClient.from('relatos').delete().eq('id', id);
-    carregarRelatos();
-}
-
-async function carregarRelatos() {
-    camadasRelatos.forEach(c => mapa.removeLayer(c));
-    camadasRelatos = [];
-
-    const { data: relatos } = await supabaseClient.from('relatos').select('*').order('data', {ascending:false});
-    const lista = document.getElementById('lista-relatos');
-
-    if (!relatos || relatos.length === 0) {
-        lista.innerHTML = '<p class="text-gray-500 text-xs">Nenhum relato ativo.</p>';
-        return;
-    }
-
-    lista.innerHTML = '';
-    relatos.forEach(r => {
-        lista.innerHTML += `
-            <div class="p-1 border-b border-gray-100 flex justify-between items-center">
-                <span class="text-xs">${r.tipo === 'fixo' ? '🚧' : '💥'} ${r.descricao.length > 25 ? r.descricao.substring(0,25)+'...' : r.descricao}</span>
-                <button onclick="removerRelato(${r.id})" class="text-red-500 text-[10px] font-bold">X</button>
-            </div>
-        `;
-        desenharRelato(r);
+    // Atualiza lista de escolha no cadastro
+    cadastroSelect.innerHTML = `<option value="">Escolha ou digite abaixo</option>`;
+    todosMotivos.forEach(m => {
+        const opt = document.createElement('option');
+        opt.value = m;
+        opt.textContent = m;
+        cadastroSelect.appendChild(opt);
     });
 }
 
-// ==============================================
-// 🧹 LIMPEZA AUTOMÁTICA À MEIA-NOITE
-// ==============================================
-function agendarLimpezaDiaria() {
-    const agora = new Date();
-    const meiaNoite = new Date(agora.getFullYear(), agora.getMonth(), agora.getDate() + 1, 0, 0, 0);
-    setTimeout(() => {
-        supabaseClient.from('relatos').delete().eq('tipo','diario').then(() => {
-            carregarRelatos();
-            agendarLimpezaDiaria();
-        });
-    }, meiaNoite - agora);
+// APLICA TODOS OS FILTROS
+function aplicarFiltros() {
+    camadasDesvios.forEach(c => mapa.removeLayer(c));
+    camadasDesvios = [];
+    const lista = document.getElementById('lista-desvios');
+    lista.innerHTML = '';
+
+    const filtrados = todosOsDesvios.filter(d => {
+        if (filtroAtual.tipo !== 'todos' && d.tipo !== filtroAtual.tipo) return false;
+        if (filtroAtual.motivo !== '' && d.motivo !== filtroAtual.motivo) return false;
+        if (filtroAtual.linha !== '' && !d.linhas_afetadas.includes(filtroAtual.linha)) return false;
+        return true;
+    });
+
+    if (filtrados.length === 0) {
+        lista.innerHTML = `<p class="text-gray-500">Nenhum desvio corresponde aos filtros</p>`;
+        return;
+    }
+
+    filtrados.forEach(d => {
+        lista.innerHTML += `
+            <div class="p-2 border-b border-gray-100 flex justify-between items-center">
+                <div>
+                    <strong class="${d.tipo==='provisorio'?'text-provisorio':'text-permanente'}">
+                        ${d.tipo==='provisorio'?'🟡':'🔴'} ${d.linhas_afetadas}
+                    </strong>
+                    <div class="text-gray-600">${d.motivo} | ${d.horario_inicio} - ${d.horario_final}</div>
+                </div>
+                <button onclick="removerDesvio(${d.id})" class="text-red-500 font-bold">X</button>
+            </div>
+        `;
+        desenharDesvio(d);
+    });
+}
+
+async function salvarDesvio() {
+    if (!pontoClicado) return alert("❗ Clique primeiro no mapa!");
+
+    // Pega o motivo: se escolheu na lista, usa; senão usa o que digitou
+    const motivoEscolhido = document.getElementById('motivo-lista').value;
+    const motivoDigitado = document.getElementById('motivo-desvio').value.trim();
+    const motivoFinal = motivoEscolhido || motivoDigitado || 'Sem informação';
+
+    const dados = {
+        tipo: document.querySelector('input[name="tipo-desvio"]:checked').value,
+        lat: pontoClicado.lat,
+        lng: pontoClicado.lng,
+        linhas_afetadas: document.getElementById('linhas-afetadas').value.trim(),
+        motivo: motivoFinal,
+        horario_inicio: document.getElementById('horario-inicio').value || 'Não informado',
+        horario_final: document.getElementById('horario-final').value || 'Não informado',
+        data_cadastro: new Date()
+    };
+    if (!dados.linhas_afetadas) return alert("Informe as linhas afetadas!");
+
+    await supabaseClient.from('desvios').insert([dados]);
+    alert("✅ Desvio cadastrado!");
+    
+    // Limpa campos
+    document.getElementById('linhas-afetadas').value = '';
+    document.getElementById('motivo-lista').value = '';
+    document.getElementById('motivo-desvio').value = '';
+    document.getElementById('horario-inicio').value = '';
+    document.getElementById('horario-final').value = '';
+    pontoClicado = null;
+
+    await carregarDesvios();
+}
+
+async function removerDesvio(id) {
+    if (!confirm("Remover este desvio?")) return;
+    await supabaseClient.from('desvios').delete().eq('id', id);
+    await carregarDesvios();
+}
+
+async function carregarDesvios() {
+    const { data } = await supabaseClient.from('desvios').select('*').order('data_cadastro', {ascending:false});
+    todosOsDesvios = data || [];
+    atualizarListaMotivos();
+    aplicarFiltros();
 }
 
 // ==============================================
-// 🚏 PARADAS
-// ==============================================
-function desenharParada(p) {
-    L.circle([p.lat,p.lng], {color:'#C2185B',fillColor:'#EC407A',fillOpacity:0.5,radius:RAIO_METROS}).addTo(mapa)
-     .bindPopup(`🚏 ${p.nome}<br>Raio 5m`);
-}
-async function salvarParada() {
-    const n = document.getElementById('nome-parada').value;
-    const la = parseFloat(document.getElementById('lat-parada').value);
-    const lo = parseFloat(document.getElementById('lng-parada').value);
-    if (!n || isNaN(la) || isNaN(lo)) return alert("Preencha todos os campos!");
-    await supabaseClient.from('paradas_manuais').insert([{nome:n,lat:la,lng:lo,data_cadastro:new Date()}]);
-    carregarDados();
-}
-async function carregarDados() {
-    camadasParadas.forEach(c=>mapa.removeLayer(c)); camadasParadas=[];
-    const {data:p} = await supabaseClient.from('paradas_manuais').select('*');
-    p?.forEach(desenharParada);
-    carregarRelatos();
-}
-
-// ==============================================
-// 📍 CLIQUE NO MAPA PARA RELATOS
+// 📍 CLIQUE NO MAPA
 // ==============================================
 mapa.on('click', e => {
     pontoClicado = { lat: e.latlng.lat, lng: e.latlng.lng };
-    document.getElementById('lat-parada').value = e.latlng.lat.toFixed(6);
-    document.getElementById('lng-parada').value = e.latlng.lng.toFixed(6);
+    document.getElementById('lat-desvio').value = e.latlng.lat.toFixed(6);
+    document.getElementById('lng-desvio').value = e.latlng.lng.toFixed(6);
 });
 
 // ==============================================
-// 🚀 INICIALIZAÇÃO GERAL
+// 🚀 INICIALIZAÇÃO E EVENTOS
 // ==============================================
 window.onload = () => {
-    carregarDados();
-    agendarLimpezaDiaria();
-    
+    carregarDesvios();
+
     document.getElementById('btn-carregar-rota').onclick = () => carregarRota(false);
     document.getElementById('btn-atualizar-rota').onclick = () => carregarRota(true);
-    document.getElementById('btn-salvar-parada').onclick = salvarParada;
-    document.getElementById('btn-adicionar-problema').onclick = salvarRelato;
+    document.getElementById('btn-salvar-desvio').onclick = salvarDesvio;
+    window.removerDesvio = removerDesvio;
 
-    window.removerRelato = removerRelato;
+    // Ao escolher motivo na lista, preenche o campo de texto
+    document.getElementById('motivo-lista').addEventListener('change', e => {
+        document.getElementById('motivo-desvio').value = e.target.value;
+    });
+
+    document.querySelectorAll('input[name="filtro-tipo"]').forEach(radio => {
+        radio.addEventListener('change', () => {
+            filtroAtual.tipo = document.querySelector('input[name="filtro-tipo"]:checked').value;
+            aplicarFiltros();
+        });
+    });
+
+    document.getElementById('filtro-motivo').addEventListener('change', e => {
+        filtroAtual.motivo = e.target.value;
+        aplicarFiltros();
+    });
+
+    document.getElementById('btn-aplicar-filtro').onclick = () => {
+        filtroAtual.linha = document.getElementById('filtro-linha').value.trim();
+        aplicarFiltros();
+    };
+
+    document.getElementById('btn-limpar-filtro').onclick = () => {
+        filtroAtual = { tipo: 'todos', motivo: '', linha: '' };
+        document.getElementById('filtro-linha').value = '';
+        document.querySelector('input[name="filtro-tipo"][value="todos"]').checked = true;
+        document.getElementById('filtro-motivo').value = '';
+        aplicarFiltros();
+    };
 };
