@@ -1,24 +1,16 @@
 // ==============================================
-// ⚠️ DADOS DO SEU SUPABASE
+// ⚠️ DADOS DO SEU PROJETO - PRONTOS E CONFIRMADOS
 // ==============================================
-const SUPABASE_URL = "https://SEU_PROJETO.supabase.co";
-const SUPABASE_KEY = "SUA_CHAVE_ANON";
+const SUPABASE_URL = "https://olildoampoutbtuaaqyq.supabase.co";
+const SUPABASE_KEY = "sb_publishable_wpT3O6lz7Hr5IkxN9sTIwA_FEHD7wZc";
 const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 // ==============================================
 // 📝 MOTIVOS PADRÃO
 // ==============================================
 const MOTIVOS_PADRAO = [
-    "Colisão",
-    "Obra da Cagece",
-    "Serviço Enel",
-    "Feira",
-    "Manifestação",
-    "Via Acidentada",
-    "Poda de Árvore",
-    "Ação Policial",
-    "Ação AMC",
-    "Festas Juninas"
+    "Colisão", "Obra da Cagece", "Serviço Enel", "Feira", "Manifestação",
+    "Via Acidentada", "Poda de Árvore", "Ação Policial", "Ação AMC", "Festas Juninas"
 ];
 
 // ==============================================
@@ -121,36 +113,29 @@ function desenharDesvio(d) {
     camadasDesvios.push(marcador);
 }
 
-// ATUALIZA LISTAS DE MOTIVOS
 function atualizarListaMotivos() {
     const filtroSelect = document.getElementById('filtro-motivo');
     const cadastroSelect = document.getElementById('motivo-lista');
     const atualFiltro = filtroAtual.motivo;
 
-    // Junta padrões + cadastrados, sem duplicatas
     const todosMotivos = [...new Set([...MOTIVOS_PADRAO, ...todosOsDesvios.map(d => d.motivo)])].sort();
 
-    // Atualiza filtro
     filtroSelect.innerHTML = `<option value="">Todos os motivos</option>`;
     todosMotivos.forEach(m => {
         const opt = document.createElement('option');
-        opt.value = m;
-        opt.textContent = m;
+        opt.value = m; opt.textContent = m;
         if (m === atualFiltro) opt.selected = true;
         filtroSelect.appendChild(opt);
     });
 
-    // Atualiza lista de escolha no cadastro
     cadastroSelect.innerHTML = `<option value="">Escolha ou digite abaixo</option>`;
     todosMotivos.forEach(m => {
         const opt = document.createElement('option');
-        opt.value = m;
-        opt.textContent = m;
+        opt.value = m; opt.textContent = m;
         cadastroSelect.appendChild(opt);
     });
 }
 
-// APLICA TODOS OS FILTROS
 function aplicarFiltros() {
     camadasDesvios.forEach(c => mapa.removeLayer(c));
     camadasDesvios = [];
@@ -188,7 +173,6 @@ function aplicarFiltros() {
 async function salvarDesvio() {
     if (!pontoClicado) return alert("❗ Clique primeiro no mapa!");
 
-    // Pega o motivo: se escolheu na lista, usa; senão usa o que digitou
     const motivoEscolhido = document.getElementById('motivo-lista').value;
     const motivoDigitado = document.getElementById('motivo-desvio').value.trim();
     const motivoFinal = motivoEscolhido || motivoDigitado || 'Sem informação';
@@ -208,7 +192,6 @@ async function salvarDesvio() {
     await supabaseClient.from('desvios').insert([dados]);
     alert("✅ Desvio cadastrado!");
     
-    // Limpa campos
     document.getElementById('linhas-afetadas').value = '';
     document.getElementById('motivo-lista').value = '';
     document.getElementById('motivo-desvio').value = '';
@@ -232,18 +215,12 @@ async function carregarDesvios() {
     aplicarFiltros();
 }
 
-// ==============================================
-// 📍 CLIQUE NO MAPA
-// ==============================================
 mapa.on('click', e => {
     pontoClicado = { lat: e.latlng.lat, lng: e.latlng.lng };
     document.getElementById('lat-desvio').value = e.latlng.lat.toFixed(6);
     document.getElementById('lng-desvio').value = e.latlng.lng.toFixed(6);
 });
 
-// ==============================================
-// 🚀 INICIALIZAÇÃO E EVENTOS
-// ==============================================
 window.onload = () => {
     carregarDesvios();
 
@@ -252,7 +229,6 @@ window.onload = () => {
     document.getElementById('btn-salvar-desvio').onclick = salvarDesvio;
     window.removerDesvio = removerDesvio;
 
-    // Ao escolher motivo na lista, preenche o campo de texto
     document.getElementById('motivo-lista').addEventListener('change', e => {
         document.getElementById('motivo-desvio').value = e.target.value;
     });
