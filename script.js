@@ -15,9 +15,9 @@ const MOTIVOS_PADRAO = [
 
 const ICONE_POR_MOTIVO = {
     "Colisão": "🚗💥🚙",
-    "Ação Policial": "🚔",
-    "Ação AMC": "🚛",
-    "Feira": "🏪",
+    "Ação Policial": "😵☠️"
+    "Ação AMC": "🛞"
+    "Feira": "🛍️🛍️🛒🤑"
     "Manifestação": "👥👥👥",
     "Via Acidentada": "🚧",
     "Obra da Cagece": "🚧",
