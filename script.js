@@ -1,12 +1,12 @@
 // ==============================================
-// ⚠️ DADOS DO SEU PROJETO
+// ⚠️ DADOS DO SEU PROJETO - JÁ CONFIGURADOS
 // ==============================================
 const SUPABASE_URL = "https://olildoampoutbtuaaqyq.supabase.co";
 const SUPABASE_KEY = "sb_publishable_wpT3O6lz7Hr5IkxN9sTIwA_FEHD7wZc";
 const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 // ==============================================
-// 📝 MOTIVOS PADRÃO E ÍCONES PERSONALIZADOS
+// 📝 MOTIVOS E ÍCONES PERSONALIZADOS
 // ==============================================
 const MOTIVOS_PADRAO = [
     "Colisão", "Obra da Cagece", "Serviço Enel", "Feira", "Manifestação",
@@ -115,7 +115,6 @@ function desenharDesvio(d) {
     const cor = d.tipo === 'provisorio' ? '#F57C00' : '#D32F2F';
     const icone = ICONE_POR_MOTIVO[d.motivo] || ICONE_POR_MOTIVO["Padrão"];
 
-    // Ícone personalizado no mapa
     const marcador = L.marker([d.lat, d.lng], {
         icon: L.divIcon({
             className: 'icone-desvio',
@@ -247,6 +246,39 @@ mapa.on('click', e => {
     document.getElementById('lng-desvio').value = e.latlng.lng.toFixed(6);
 });
 
+// ==============================================
+// 🖥️ TELA CHEIA
+// ==============================================
+const containerMapa = document.querySelector(".lg\\:col-span-3");
+const btnTelaCheia = document.getElementById("btn-tela-cheia");
+let modoCheio = false;
+
+function alternarTelaCheia() {
+    if (!modoCheio) {
+        containerMapa.classList.add("fixed", "inset-0", "z-[9999]", "rounded-none");
+        containerMapa.classList.remove("lg:col-span-3");
+        document.getElementById("mapa").style.height = "100vh";
+        btnTelaCheia.innerHTML = `<i class="fa fa-compress text-primary"></i> <span class="ml-1 text-xs font-medium">Voltar</span>`;
+        modoCheio = true;
+        setTimeout(() => mapa.invalidateSize(), 100);
+    } else {
+        containerMapa.classList.remove("fixed", "inset-0", "z-[9999]", "rounded-none");
+        containerMapa.classList.add("lg:col-span-3");
+        document.getElementById("mapa").style.height = "75vh";
+        btnTelaCheia.innerHTML = `<i class="fa fa-expand text-primary"></i> <span class="ml-1 text-xs font-medium">Tela Cheia</span>`;
+        modoCheio = false;
+        setTimeout(() => mapa.invalidateSize(), 100);
+    }
+}
+
+btnTelaCheia.addEventListener("click", alternarTelaCheia);
+document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape" && modoCheio) alternarTelaCheia();
+});
+
+// ==============================================
+// 🚀 INICIALIZAÇÃO
+// ==============================================
 window.onload = () => {
     carregarDesvios();
 
