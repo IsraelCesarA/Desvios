@@ -31,4 +31,8 @@ html, body {
 #btn-tela-cheia {
     z-index: 99999 !important;
 }
- 
+
+.flex.flex-col.gap-1 button {
+    line-height: 1;
+    padding: 1px 4px;
+}
