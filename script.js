@@ -6,7 +6,7 @@ const SUPABASE_KEY = "sb_publishable_wpT3O6lz7Hr5IkxN9sTIwA_FEHD7wZc";
 const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 // ==============================================
-// 📝 MOTIVOS E ÍCONES - SUAS ALTERAÇÕES JÁ APLICADAS
+// 📝 MOTIVOS E ÍCONES - SUAS ALTERAÇÕES
 // ==============================================
 const MOTIVOS_PADRAO = [
     "Colisão", "Obra da Cagece", "Serviço Enel", "Feira", "Manifestação",
@@ -117,7 +117,7 @@ function limparRotaDoMapa() {
 }
 
 // ==============================================
-// 🚨 DESVIOS COM RAIO + EDITAR
+// 🚨 DESVIOS COM DETALHES OPCIONAIS
 // ==============================================
 function desenharDesvio(d) {
     const cor = d.tipo === 'provisorio' ? '#F57C00' : '#D32F2F';
@@ -142,12 +142,15 @@ function desenharDesvio(d) {
         })
     }).addTo(mapa);
 
+    const detalhesHtml = d.detalhes ? `<br><strong>Detalhes:</strong> ${d.detalhes}` : '';
+
     marcador.bindPopup(`
         <strong>${icone} ${d.motivo}</strong><br>
         <strong>Tipo:</strong> ${d.tipo === 'provisorio' ? '🟡 Provisório' : '🔴 Permanente'}<br>
         <strong>Raio afetado:</strong> ${raio} metros<br>
         <strong>Linhas:</strong> ${d.linhas_afetadas}<br>
-        <strong>Horário:</strong> ${d.horario_inicio} às ${d.horario_final}<br>
+        <strong>Horário:</strong> ${d.horario_inicio} às ${d.horario_final}
+        ${detalhesHtml}
         <div class="flex gap-1 mt-2">
             <button onclick="editarDesvio(${d.id})" style="color:blue; font-size:11px;">✏️ Editar</button>
             <button onclick="removerDesvio(${d.id})" style="color:red; font-size:11px;">❌ Remover</button>
@@ -169,6 +172,7 @@ async function editarDesvio(id) {
     document.getElementById('linhas-afetadas').value = desvio.linhas_afetadas;
     document.getElementById('motivo-lista').value = desvio.motivo;
     document.getElementById('motivo-desvio').value = desvio.motivo;
+    document.getElementById('detalhes-desvio').value = desvio.detalhes || '';
     document.getElementById('horario-inicio').value = desvio.horario_inicio;
     document.getElementById('horario-final').value = desvio.horario_final;
     document.getElementById('btn-salvar-desvio').textContent = '💾 Atualizar Desvio';
@@ -185,6 +189,7 @@ function cancelarEdicao() {
     document.getElementById('linhas-afetadas').value = '';
     document.getElementById('motivo-lista').value = '';
     document.getElementById('motivo-desvio').value = '';
+    document.getElementById('detalhes-desvio').value = '';
     document.getElementById('horario-inicio').value = '';
     document.getElementById('horario-final').value = '';
     document.getElementById('btn-salvar-desvio').textContent = '✅ Salvar Desvio';
@@ -235,13 +240,14 @@ function aplicarFiltros() {
 
     filtrados.forEach(d => {
         const icone = ICONE_POR_MOTIVO[d.motivo] || '📍';
+        const resumoDetalhes = d.detalhes ? ` | ${d.detalhes.substring(0,25)}...` : '';
         lista.innerHTML += `
             <div class="p-2 border-b border-gray-100 flex justify-between items-center">
                 <div>
                     <strong class="${d.tipo==='provisorio'?'text-provisorio':'text-permanente'}">
                         ${icone} ${d.linhas_afetadas}
                     </strong>
-                    <div class="text-gray-600">${d.motivo} | Raio: ${d.raio||100}m | ${d.horario_inicio} - ${d.horario_final}</div>
+                    <div class="text-gray-600">${d.motivo} | Raio: ${d.raio||100}m${resumoDetalhes} | ${d.horario_inicio} - ${d.horario_final}</div>
                 </div>
                 <div class="flex flex-col gap-1">
                     <button onclick="editarDesvio(${d.id})" class="text-blue-500 text-xs">✏️</button>
@@ -260,6 +266,7 @@ async function salvarDesvio() {
     const motivoDigitado = document.getElementById('motivo-desvio').value.trim();
     const motivoFinal = motivoEscolhido || motivoDigitado || 'Sem informação';
     const raioValor = Number(document.getElementById('raio-desvio').value) || 100;
+    const detalhesValor = document.getElementById('detalhes-desvio').value.trim() || null;
     const idEditar = document.getElementById('id-editar').value;
 
     const dados = {
@@ -269,6 +276,7 @@ async function salvarDesvio() {
         raio: raioValor,
         linhas_afetadas: document.getElementById('linhas-afetadas').value.trim(),
         motivo: motivoFinal,
+        detalhes: detalhesValor,
         horario_inicio: document.getElementById('horario-inicio').value || 'Não informado',
         horario_final: document.getElementById('horario-final').value || 'Não informado'
     };
@@ -310,7 +318,7 @@ mapa.on('click', e => {
 });
 
 // ==============================================
-// 🖥️ TELA CHEIA - CORRIGIDO
+// 🖥️ TELA CHEIA
 // ==============================================
 const containerMapa = document.querySelector(".lg\\:col-span-3");
 const btnTelaCheia = document.getElementById("btn-tela-cheia");
