@@ -20,3 +20,8 @@ html, body {
 .leaflet-popup-content-wrapper {
     font-size: 13px;
 }
+
+.icone-desvio {
+    background: transparent !important;
+    border: none !important;
+}
