@@ -36,4 +36,7 @@ html, body {
     line-height: 1;
     padding: 1px 4px;
 }
- 
+
+textarea {
+    resize: vertical;
+}
