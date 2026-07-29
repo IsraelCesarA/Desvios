@@ -56,10 +56,12 @@
                         <option value="ida">Ida</option>
                         <option value="volta">Volta</option>
                     </select>
-                    <div class="flex gap-2">
+                    <div class="flex gap-2 mb-2">
                         <button id="btn-carregar-rota" class="flex-1 bg-bus text-white py-2 rounded">Carregar</button>
                         <button id="btn-atualizar-rota" class="flex-1 bg-gray-600 text-white py-2 rounded">Atualizar</button>
                     </div>
+                    <!-- NOVO BOTÃO LIMPAR ROTA -->
+                    <button id="btn-limpar-rota" class="w-full bg-red-500 text-white py-2 rounded mb-2">🗑️ Limpar Rota do Mapa</button>
                     <div id="info-rota" class="hidden mt-3 p-2 bg-gray-50 rounded text-sm"></div>
                 </div>
 
@@ -99,7 +101,7 @@
                 </div>
 
                 <div class="bg-white rounded-xl shadow-md p-5">
-                    <h2 class="text-lg font-bold mb-4"><i class="fa fa-exclamation-triangle mr-2"></i> Cadastrar Desvio</h2>
+                    <h2 id="titulo-cadastro" class="text-lg font-bold mb-4"><i class="fa fa-exclamation-triangle mr-2"></i> Cadastrar Desvio</h2>
                     <p class="text-xs text-gray-600 mb-3">Clique no mapa para definir o local</p>
 
                     <div class="space-y-2 mb-4">
@@ -140,7 +142,9 @@
                         </div>
                     </div>
 
+                    <input type="hidden" id="id-editar" value="">
                     <button id="btn-salvar-desvio" class="w-full bg-primary text-white py-2 rounded">✅ Salvar Desvio</button>
+                    <button id="btn-cancelar-edicao" class="w-full mt-2 bg-gray-400 text-white py-2 rounded hidden">❌ Cancelar Edição</button>
                 </div>
 
                 <div class="bg-white rounded-xl shadow-md p-5">
