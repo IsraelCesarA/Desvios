@@ -17,7 +17,7 @@ const ICONE_POR_MOTIVO = {
     "Colisão": "🚗💥🚙",
     "Ação Policial": "🚔",
     "Ação AMC": "🚛",
-    "Feira": "🏪",
+    "Feira": "🛒",
     "Manifestação": "👥👥👥",
     "Via Acidentada": "🚧",
     "Obra da Cagece": "🚧",
@@ -112,7 +112,6 @@ async function carregarRota(forcar = false) {
 // 🚨 DESVIOS COM ÍCONES E ÁREA
 // ==============================================
 function desenharDesvio(d) {
-    const cor = d.tipo === 'provisorio' ? '#F57C00' : '#D32F2F';
     const icone = ICONE_POR_MOTIVO[d.motivo] || ICONE_POR_MOTIVO["Padrão"];
 
     const marcador = L.marker([d.lat, d.lng], {
@@ -247,7 +246,7 @@ mapa.on('click', e => {
 });
 
 // ==============================================
-// 🖥️ TELA CHEIA
+// 🖥️ TELA CHEIA - CORRIGIDO 100%
 // ==============================================
 const containerMapa = document.querySelector(".lg\\:col-span-3");
 const btnTelaCheia = document.getElementById("btn-tela-cheia");
@@ -255,19 +254,24 @@ let modoCheio = false;
 
 function alternarTelaCheia() {
     if (!modoCheio) {
-        containerMapa.classList.add("fixed", "inset-0", "z-[9999]", "rounded-none");
+        // Entra em tela cheia
+        containerMapa.classList.add("fixed", "inset-0", "z-[9999]", "rounded-none", "w-full", "h-full");
         containerMapa.classList.remove("lg:col-span-3");
         document.getElementById("mapa").style.height = "100vh";
+        document.getElementById("mapa").style.width = "100vw";
         btnTelaCheia.innerHTML = `<i class="fa fa-compress text-primary"></i> <span class="ml-1 text-xs font-medium">Voltar</span>`;
         modoCheio = true;
-        setTimeout(() => mapa.invalidateSize(), 100);
+        // Força o mapa a preencher todo espaço imediatamente
+        setTimeout(() => mapa.invalidateSize({ animate: false }), 50);
     } else {
-        containerMapa.classList.remove("fixed", "inset-0", "z-[9999]", "rounded-none");
+        // Sai da tela cheia
+        containerMapa.classList.remove("fixed", "inset-0", "z-[9999]", "rounded-none", "w-full", "h-full");
         containerMapa.classList.add("lg:col-span-3");
         document.getElementById("mapa").style.height = "75vh";
+        document.getElementById("mapa").style.width = "100%";
         btnTelaCheia.innerHTML = `<i class="fa fa-expand text-primary"></i> <span class="ml-1 text-xs font-medium">Tela Cheia</span>`;
         modoCheio = false;
-        setTimeout(() => mapa.invalidateSize(), 100);
+        setTimeout(() => mapa.invalidateSize({ animate: false }), 50);
     }
 }
 
