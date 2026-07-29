@@ -6,7 +6,7 @@ const SUPABASE_KEY = "sb_publishable_wpT3O6lz7Hr5IkxN9sTIwA_FEHD7wZc";
 const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 // ==============================================
-// 📝 MOTIVOS E ÍCONES
+// 📝 MOTIVOS E ÍCONES - SUAS ALTERAÇÕES JÁ APLICADAS
 // ==============================================
 const MOTIVOS_PADRAO = [
     "Colisão", "Obra da Cagece", "Serviço Enel", "Feira", "Manifestação",
@@ -15,9 +15,9 @@ const MOTIVOS_PADRAO = [
 
 const ICONE_POR_MOTIVO = {
     "Colisão": "🚗💥🚙",
-    "Ação Policial": "😵☠️"
-    "Ação AMC": "🛞"
-    "Feira": "🛍️🛍️🛒🤑"
+    "Ação Policial": "😵☠️",
+    "Ação AMC": "🛞",
+    "Feira": "🛍️🛍️🛒🤑",
     "Manifestação": "👥👥👥",
     "Via Acidentada": "🚧",
     "Obra da Cagece": "🚧",
@@ -160,7 +160,6 @@ async function editarDesvio(id) {
     const desvio = todosOsDesvios.find(d => d.id === id);
     if (!desvio) return;
 
-    // Preenche formulário com dados existentes
     document.getElementById('id-editar').value = desvio.id;
     document.getElementById('titulo-cadastro').innerHTML = '<i class="fa fa-pencil mr-2"></i> Editar Desvio';
     document.querySelector(`input[name="tipo-desvio"][value="${desvio.tipo}"]`).checked = true;
@@ -176,7 +175,6 @@ async function editarDesvio(id) {
     document.getElementById('btn-cancelar-edicao').classList.remove('hidden');
     pontoClicado = { lat: desvio.lat, lng: desvio.lng };
 
-    // Rola até o formulário
     document.querySelector('.bg-white.rounded-xl.shadow-md.p-5').scrollIntoView({behavior:'smooth'});
 }
 
@@ -278,11 +276,9 @@ async function salvarDesvio() {
 
     try {
         if (idEditar) {
-            // MODO EDIÇÃO
             await supabaseClient.from('desvios').update(dados).eq('id', idEditar);
             alert("✅ Desvio atualizado!");
         } else {
-            // MODO CADASTRO NOVO
             dados.data_cadastro = new Date();
             await supabaseClient.from('desvios').insert([dados]);
             alert("✅ Desvio cadastrado!");
@@ -351,12 +347,10 @@ document.addEventListener("keydown", (e) => {
 window.onload = () => {
     carregarDesvios();
 
-    // Botões de Rota
     document.getElementById('btn-carregar-rota').onclick = () => carregarRota(false);
     document.getElementById('btn-atualizar-rota').onclick = () => carregarRota(true);
     document.getElementById('btn-limpar-rota').onclick = limparRotaDoMapa;
 
-    // Botões de Desvio
     document.getElementById('btn-salvar-desvio').onclick = salvarDesvio;
     document.getElementById('btn-cancelar-edicao').onclick = cancelarEdicao;
     window.editarDesvio = editarDesvio;
@@ -366,7 +360,6 @@ window.onload = () => {
         document.getElementById('motivo-desvio').value = e.target.value;
     });
 
-    // Filtros
     document.querySelectorAll('input[name="filtro-tipo"]').forEach(radio => {
         radio.addEventListener('change', () => {
             filtroAtual.tipo = document.querySelector('input[name="filtro-tipo"]:checked').value;
