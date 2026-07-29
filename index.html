@@ -41,7 +41,6 @@
     <main class="container mx-auto px-4 py-6">
         <div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
             <div class="lg:col-span-3 bg-white rounded-xl shadow-md overflow-hidden relative">
-                <!-- BOTÃO TELA CHEIA -->
                 <button id="btn-tela-cheia" class="absolute top-3 right-3 z-[1000] bg-white p-2 rounded shadow-md hover:bg-gray-100 transition">
                     <i class="fa fa-expand text-primary"></i>
                     <span class="ml-1 text-xs font-medium">Tela Cheia</span>
@@ -119,7 +118,7 @@
                         <input type="text" id="lng-desvio" placeholder="Longitude" class="p-2 border rounded text-sm" readonly>
                     </div>
 
-                    <input type="text" id="area-desvio" placeholder="Área / Bairro / Referência" class="w-full p-2 border rounded mb-2">
+                    <input type="number" id="raio-desvio" placeholder="Raio de alcance (metros)" min="10" max="2000" value="100" class="w-full p-2 border rounded mb-2">
                     <input type="text" id="linhas-afetadas" placeholder="Linhas afetadas (ex: 011, 012)" class="w-full p-2 border rounded mb-2">
                     
                     <div class="mb-2">
