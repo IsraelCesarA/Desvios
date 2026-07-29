@@ -1,17 +1,31 @@
 // ==============================================
-// ⚠️ DADOS DO SEU PROJETO - PRONTOS E CONFIRMADOS
+// ⚠️ DADOS DO SEU PROJETO
 // ==============================================
 const SUPABASE_URL = "https://olildoampoutbtuaaqyq.supabase.co";
 const SUPABASE_KEY = "sb_publishable_wpT3O6lz7Hr5IkxN9sTIwA_FEHD7wZc";
 const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 // ==============================================
-// 📝 MOTIVOS PADRÃO
+// 📝 MOTIVOS PADRÃO E ÍCONES PERSONALIZADOS
 // ==============================================
 const MOTIVOS_PADRAO = [
     "Colisão", "Obra da Cagece", "Serviço Enel", "Feira", "Manifestação",
     "Via Acidentada", "Poda de Árvore", "Ação Policial", "Ação AMC", "Festas Juninas"
 ];
+
+const ICONE_POR_MOTIVO = {
+    "Colisão": "🚗💥🚙",
+    "Ação Policial": "🚔",
+    "Ação AMC": "🚛",
+    "Feira": "🏪",
+    "Manifestação": "👥👥👥",
+    "Via Acidentada": "🚧",
+    "Obra da Cagece": "🚧",
+    "Serviço Enel": "⚡",
+    "Poda de Árvore": "🌳✂️",
+    "Festas Juninas": "🎇🔥",
+    "Padrão": "📍"
+};
 
 // ==============================================
 // 🚍 ROTAS
@@ -95,18 +109,27 @@ async function carregarRota(forcar = false) {
 }
 
 // ==============================================
-// 🚨 DESVIOS E FILTROS
+// 🚨 DESVIOS COM ÍCONES E ÁREA
 // ==============================================
 function desenharDesvio(d) {
     const cor = d.tipo === 'provisorio' ? '#F57C00' : '#D32F2F';
-    const marcador = L.circle([d.lat, d.lng], {
-        color: cor, fillColor: cor, fillOpacity: 0.5, radius: 8
+    const icone = ICONE_POR_MOTIVO[d.motivo] || ICONE_POR_MOTIVO["Padrão"];
+
+    // Ícone personalizado no mapa
+    const marcador = L.marker([d.lat, d.lng], {
+        icon: L.divIcon({
+            className: 'icone-desvio',
+            html: `<div style="font-size:22px; text-shadow: 1px 1px 2px rgba(0,0,0,0.5);">${icone}</div>`,
+            iconSize: [28, 28],
+            iconAnchor: [14, 14]
+        })
     }).addTo(mapa);
 
     marcador.bindPopup(`
-        <strong>${d.tipo === 'provisorio' ? '🟡 Provisório' : '🔴 Permanente'}</strong><br>
+        <strong>${icone} ${d.motivo}</strong><br>
+        <strong>Tipo:</strong> ${d.tipo === 'provisorio' ? '🟡 Provisório' : '🔴 Permanente'}<br>
+        <strong>Área:</strong> ${d.area || 'Não informada'}<br>
         <strong>Linhas:</strong> ${d.linhas_afetadas}<br>
-        <strong>Motivo:</strong> ${d.motivo}<br>
         <strong>Horário:</strong> ${d.horario_inicio} às ${d.horario_final}<br>
         <button onclick="removerDesvio(${d.id})" style="color:red; font-size:11px; margin-top:5px;">❌ Remover</button>
     `);
@@ -123,7 +146,7 @@ function atualizarListaMotivos() {
     filtroSelect.innerHTML = `<option value="">Todos os motivos</option>`;
     todosMotivos.forEach(m => {
         const opt = document.createElement('option');
-        opt.value = m; opt.textContent = m;
+        opt.value = m; opt.textContent = `${ICONE_POR_MOTIVO[m]||'📍'} ${m}`;
         if (m === atualFiltro) opt.selected = true;
         filtroSelect.appendChild(opt);
     });
@@ -131,7 +154,7 @@ function atualizarListaMotivos() {
     cadastroSelect.innerHTML = `<option value="">Escolha ou digite abaixo</option>`;
     todosMotivos.forEach(m => {
         const opt = document.createElement('option');
-        opt.value = m; opt.textContent = m;
+        opt.value = m; opt.textContent = `${ICONE_POR_MOTIVO[m]||'📍'} ${m}`;
         cadastroSelect.appendChild(opt);
     });
 }
@@ -155,13 +178,14 @@ function aplicarFiltros() {
     }
 
     filtrados.forEach(d => {
+        const icone = ICONE_POR_MOTIVO[d.motivo] || '📍';
         lista.innerHTML += `
             <div class="p-2 border-b border-gray-100 flex justify-between items-center">
                 <div>
                     <strong class="${d.tipo==='provisorio'?'text-provisorio':'text-permanente'}">
-                        ${d.tipo==='provisorio'?'🟡':'🔴'} ${d.linhas_afetadas}
+                        ${icone} ${d.linhas_afetadas}
                     </strong>
-                    <div class="text-gray-600">${d.motivo} | ${d.horario_inicio} - ${d.horario_final}</div>
+                    <div class="text-gray-600">${d.motivo} | ${d.area || 'Sem área'} | ${d.horario_inicio} - ${d.horario_final}</div>
                 </div>
                 <button onclick="removerDesvio(${d.id})" class="text-red-500 font-bold">X</button>
             </div>
@@ -181,6 +205,7 @@ async function salvarDesvio() {
         tipo: document.querySelector('input[name="tipo-desvio"]:checked').value,
         lat: pontoClicado.lat,
         lng: pontoClicado.lng,
+        area: document.getElementById('area-desvio').value.trim() || 'Não informada',
         linhas_afetadas: document.getElementById('linhas-afetadas').value.trim(),
         motivo: motivoFinal,
         horario_inicio: document.getElementById('horario-inicio').value || 'Não informado',
@@ -192,6 +217,7 @@ async function salvarDesvio() {
     await supabaseClient.from('desvios').insert([dados]);
     alert("✅ Desvio cadastrado!");
     
+    document.getElementById('area-desvio').value = '';
     document.getElementById('linhas-afetadas').value = '';
     document.getElementById('motivo-lista').value = '';
     document.getElementById('motivo-desvio').value = '';
