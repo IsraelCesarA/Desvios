@@ -4,20 +4,19 @@
     box-sizing: border-box;
 }
 
-@layer utilities {
-    .content-auto {
-        content-visibility: auto;
-    }
-    .scrollbar-hide {
-        -ms-overflow-style: none;
-        scrollbar-width: none;
-    }
-    .scrollbar-hide::-webkit-scrollbar {
-        display: none;
-    }
+html, body {
+    height: 100%;
 }
 
 #mapa {
     min-height: 400px;
     z-index: 1;
+}
+
+.hidden {
+    display: none;
+}
+
+.leaflet-popup-content-wrapper {
+    font-size: 13px;
 }
