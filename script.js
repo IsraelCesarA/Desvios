@@ -1,12 +1,12 @@
 // ==============================================
-// ⚠️ DADOS DO SEU PROJETO - JÁ CONFIGURADOS
+// ⚠️ DADOS DO SEU PROJETO
 // ==============================================
 const SUPABASE_URL = "https://olildoampoutbtuaaqyq.supabase.co";
 const SUPABASE_KEY = "sb_publishable_wpT3O6lz7Hr5IkxN9sTIwA_FEHD7wZc";
 const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 // ==============================================
-// 📝 MOTIVOS E ÍCONES PERSONALIZADOS
+// 📝 MOTIVOS E ÍCONES
 // ==============================================
 const MOTIVOS_PADRAO = [
     "Colisão", "Obra da Cagece", "Serviço Enel", "Feira", "Manifestação",
@@ -17,7 +17,7 @@ const ICONE_POR_MOTIVO = {
     "Colisão": "🚗💥🚙",
     "Ação Policial": "🚔",
     "Ação AMC": "🚛",
-    "Feira": "🛒",
+    "Feira": "🏪",
     "Manifestação": "👥👥👥",
     "Via Acidentada": "🚧",
     "Obra da Cagece": "🚧",
@@ -109,11 +109,24 @@ async function carregarRota(forcar = false) {
 }
 
 // ==============================================
-// 🚨 DESVIOS COM ÍCONES E ÁREA
+// 🚨 DESVIOS COM RAIO DE ALCANCE
 // ==============================================
 function desenharDesvio(d) {
+    const cor = d.tipo === 'provisorio' ? '#F57C00' : '#D32F2F';
     const icone = ICONE_POR_MOTIVO[d.motivo] || ICONE_POR_MOTIVO["Padrão"];
+    const raio = d.raio ? Number(d.raio) : 100;
 
+    // Círculo mostrando a área afetada
+    const circulo = L.circle([d.lat, d.lng], {
+        color: cor,
+        fillColor: cor,
+        fillOpacity: 0.2,
+        radius: raio,
+        weight: 2
+    }).addTo(mapa);
+    camadasDesvios.push(circulo);
+
+    // Ícone no centro
     const marcador = L.marker([d.lat, d.lng], {
         icon: L.divIcon({
             className: 'icone-desvio',
@@ -126,7 +139,7 @@ function desenharDesvio(d) {
     marcador.bindPopup(`
         <strong>${icone} ${d.motivo}</strong><br>
         <strong>Tipo:</strong> ${d.tipo === 'provisorio' ? '🟡 Provisório' : '🔴 Permanente'}<br>
-        <strong>Área:</strong> ${d.area || 'Não informada'}<br>
+        <strong>Raio afetado:</strong> ${raio} metros<br>
         <strong>Linhas:</strong> ${d.linhas_afetadas}<br>
         <strong>Horário:</strong> ${d.horario_inicio} às ${d.horario_final}<br>
         <button onclick="removerDesvio(${d.id})" style="color:red; font-size:11px; margin-top:5px;">❌ Remover</button>
@@ -183,7 +196,7 @@ function aplicarFiltros() {
                     <strong class="${d.tipo==='provisorio'?'text-provisorio':'text-permanente'}">
                         ${icone} ${d.linhas_afetadas}
                     </strong>
-                    <div class="text-gray-600">${d.motivo} | ${d.area || 'Sem área'} | ${d.horario_inicio} - ${d.horario_final}</div>
+                    <div class="text-gray-600">${d.motivo} | Raio: ${d.raio||100}m | ${d.horario_inicio} - ${d.horario_final}</div>
                 </div>
                 <button onclick="removerDesvio(${d.id})" class="text-red-500 font-bold">X</button>
             </div>
@@ -198,12 +211,13 @@ async function salvarDesvio() {
     const motivoEscolhido = document.getElementById('motivo-lista').value;
     const motivoDigitado = document.getElementById('motivo-desvio').value.trim();
     const motivoFinal = motivoEscolhido || motivoDigitado || 'Sem informação';
+    const raioValor = Number(document.getElementById('raio-desvio').value) || 100;
 
     const dados = {
         tipo: document.querySelector('input[name="tipo-desvio"]:checked').value,
         lat: pontoClicado.lat,
         lng: pontoClicado.lng,
-        area: document.getElementById('area-desvio').value.trim() || 'Não informada',
+        raio: raioValor,
         linhas_afetadas: document.getElementById('linhas-afetadas').value.trim(),
         motivo: motivoFinal,
         horario_inicio: document.getElementById('horario-inicio').value || 'Não informado',
@@ -215,7 +229,7 @@ async function salvarDesvio() {
     await supabaseClient.from('desvios').insert([dados]);
     alert("✅ Desvio cadastrado!");
     
-    document.getElementById('area-desvio').value = '';
+    document.getElementById('raio-desvio').value = '100';
     document.getElementById('linhas-afetadas').value = '';
     document.getElementById('motivo-lista').value = '';
     document.getElementById('motivo-desvio').value = '';
@@ -246,7 +260,7 @@ mapa.on('click', e => {
 });
 
 // ==============================================
-// 🖥️ TELA CHEIA - CORRIGIDO 100%
+// 🖥️ TELA CHEIA - CORRIGIDO
 // ==============================================
 const containerMapa = document.querySelector(".lg\\:col-span-3");
 const btnTelaCheia = document.getElementById("btn-tela-cheia");
@@ -254,17 +268,14 @@ let modoCheio = false;
 
 function alternarTelaCheia() {
     if (!modoCheio) {
-        // Entra em tela cheia
         containerMapa.classList.add("fixed", "inset-0", "z-[9999]", "rounded-none", "w-full", "h-full");
         containerMapa.classList.remove("lg:col-span-3");
         document.getElementById("mapa").style.height = "100vh";
         document.getElementById("mapa").style.width = "100vw";
         btnTelaCheia.innerHTML = `<i class="fa fa-compress text-primary"></i> <span class="ml-1 text-xs font-medium">Voltar</span>`;
         modoCheio = true;
-        // Força o mapa a preencher todo espaço imediatamente
         setTimeout(() => mapa.invalidateSize({ animate: false }), 50);
     } else {
-        // Sai da tela cheia
         containerMapa.classList.remove("fixed", "inset-0", "z-[9999]", "rounded-none", "w-full", "h-full");
         containerMapa.classList.add("lg:col-span-3");
         document.getElementById("mapa").style.height = "75vh";
