@@ -9,6 +9,8 @@ html, body {
 }
 
 #mapa {
+    width: 100% !important;
+    height: 100% !important;
     min-height: 400px;
     z-index: 1;
 }
@@ -24,4 +26,8 @@ html, body {
 .icone-desvio {
     background: transparent !important;
     border: none !important;
+}
+
+#btn-tela-cheia {
+    z-index: 99999 !important;
 }
