@@ -6,7 +6,7 @@ const SUPABASE_KEY = "sb_publishable_wpT3O6lz7Hr5IkxN9sTIwA_FEHD7wZc";
 const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 // ==============================================
-// 📝 MOTIVOS E ÍCONES - SUAS ALTERAÇÕES
+// 📝 MOTIVOS E ÍCONES
 // ==============================================
 const MOTIVOS_PADRAO = [
     "Colisão", "Obra da Cagece", "Serviço Enel", "Feira", "Manifestação",
@@ -117,7 +117,7 @@ function limparRotaDoMapa() {
 }
 
 // ==============================================
-// 🚨 DESVIOS COM DETALHES OPCIONAIS
+// 🚨 DESVIOS COM DETALHES E SALVAMENTO CORRIGIDO
 // ==============================================
 function desenharDesvio(d) {
     const cor = d.tipo === 'provisorio' ? '#F57C00' : '#D32F2F';
@@ -168,13 +168,13 @@ async function editarDesvio(id) {
     document.querySelector(`input[name="tipo-desvio"][value="${desvio.tipo}"]`).checked = true;
     document.getElementById('lat-desvio').value = desvio.lat;
     document.getElementById('lng-desvio').value = desvio.lng;
-    document.getElementById('raio-desvio').value = desvio.raio;
+    document.getElementById('raio-desvio').value = desvio.raio || 100;
     document.getElementById('linhas-afetadas').value = desvio.linhas_afetadas;
     document.getElementById('motivo-lista').value = desvio.motivo;
     document.getElementById('motivo-desvio').value = desvio.motivo;
     document.getElementById('detalhes-desvio').value = desvio.detalhes || '';
-    document.getElementById('horario-inicio').value = desvio.horario_inicio;
-    document.getElementById('horario-final').value = desvio.horario_final;
+    document.getElementById('horario-inicio').value = desvio.horario_inicio || '';
+    document.getElementById('horario-final').value = desvio.horario_final || '';
     document.getElementById('btn-salvar-desvio').textContent = '💾 Atualizar Desvio';
     document.getElementById('btn-cancelar-edicao').classList.remove('hidden');
     pontoClicado = { lat: desvio.lat, lng: desvio.lng };
@@ -185,6 +185,7 @@ async function editarDesvio(id) {
 function cancelarEdicao() {
     document.getElementById('id-editar').value = '';
     document.getElementById('titulo-cadastro').innerHTML = '<i class="fa fa-exclamation-triangle mr-2"></i> Cadastrar Desvio';
+    document.querySelector('input[name="tipo-desvio"][value="provisorio"]').checked = true;
     document.getElementById('raio-desvio').value = '100';
     document.getElementById('linhas-afetadas').value = '';
     document.getElementById('motivo-lista').value = '';
@@ -259,53 +260,68 @@ function aplicarFiltros() {
     });
 }
 
+// ✅ FUNÇÃO DE SALVAR COM TODAS AS CORREÇÕES
 async function salvarDesvio() {
-    if (!pontoClicado) return alert("❗ Clique primeiro no mapa!");
+    if (!pontoClicado) return alert("❗ Clique primeiro no mapa para definir o local!");
 
-    const motivoEscolhido = document.getElementById('motivo-lista').value;
+    const motivoEscolhido = document.getElementById('motivo-lista').value.trim();
     const motivoDigitado = document.getElementById('motivo-desvio').value.trim();
     const motivoFinal = motivoEscolhido || motivoDigitado || 'Sem informação';
     const raioValor = Number(document.getElementById('raio-desvio').value) || 100;
     const detalhesValor = document.getElementById('detalhes-desvio').value.trim() || null;
     const idEditar = document.getElementById('id-editar').value;
+    const linhas = document.getElementById('linhas-afetadas').value.trim();
+
+    if (!linhas) return alert("⚠️ Informe as linhas afetadas! Campo obrigatório.");
 
     const dados = {
         tipo: document.querySelector('input[name="tipo-desvio"]:checked').value,
         lat: pontoClicado.lat,
         lng: pontoClicado.lng,
         raio: raioValor,
-        linhas_afetadas: document.getElementById('linhas-afetadas').value.trim(),
+        linhas_afetadas: linhas,
         motivo: motivoFinal,
         detalhes: detalhesValor,
-        horario_inicio: document.getElementById('horario-inicio').value || 'Não informado',
-        horario_final: document.getElementById('horario-final').value || 'Não informado'
+        horario_inicio: document.getElementById('horario-inicio').value.trim() || 'Não informado',
+        horario_final: document.getElementById('horario-final').value.trim() || 'Não informado'
     };
-    if (!dados.linhas_afetadas) return alert("Informe as linhas afetadas!");
 
     try {
         if (idEditar) {
-            await supabaseClient.from('desvios').update(dados).eq('id', idEditar);
-            alert("✅ Desvio atualizado!");
+            const { error } = await supabaseClient.from('desvios').update(dados).eq('id', idEditar);
+            if (error) throw error;
+            alert("✅ Desvio atualizado com sucesso!");
         } else {
-            dados.data_cadastro = new Date();
-            await supabaseClient.from('desvios').insert([dados]);
-            alert("✅ Desvio cadastrado!");
+            dados.data_cadastro = new Date().toISOString();
+            const { error } = await supabaseClient.from('desvios').insert([dados]);
+            if (error) throw error;
+            alert("✅ Desvio cadastrado com sucesso!");
         }
         cancelarEdicao();
         await carregarDesvios();
     } catch (erro) {
-        alert("❌ Erro: " + erro.message);
+        console.error("ERRO NO SUPABASE:", erro);
+        alert(`❌ Não foi possível salvar: ${erro.message || 'Verifique o banco de dados'}`);
     }
 }
 
 async function removerDesvio(id) {
     if (!confirm("Remover este desvio permanentemente?")) return;
-    await supabaseClient.from('desvios').delete().eq('id', id);
+    const { error } = await supabaseClient.from('desvios').delete().eq('id', id);
+    if (error) {
+        console.error("ERRO AO REMOVER:", error);
+        return alert(`❌ Erro ao remover: ${error.message}`);
+    }
     await carregarDesvios();
 }
 
 async function carregarDesvios() {
-    const { data } = await supabaseClient.from('desvios').select('*').order('data_cadastro', {ascending:false});
+    const { data, error } = await supabaseClient.from('desvios').select('*').order('data_cadastro', {ascending:false});
+    if (error) {
+        console.error("ERRO AO CARREGAR:", error);
+        todosOsDesvios = [];
+        return;
+    }
     todosOsDesvios = data || [];
     atualizarListaMotivos();
     aplicarFiltros();
