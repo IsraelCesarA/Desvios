@@ -45,7 +45,7 @@ let todosOsDesvios = [];
 let filtroAtual = { tipo: 'todos', motivo: '', linha: '' };
 
 // ==============================================
-// 🔄 BUSCA DE ROTAS
+// 🔄 BUSCA E LIMPEZA DE ROTAS
 // ==============================================
 async function buscarComTentativas(url, tentativa = 1) {
     try {
@@ -77,6 +77,7 @@ async function carregarRota(forcar = false) {
     const info = document.getElementById("info-rota");
     if (!numLinha) return alert("Digite a linha!");
 
+    limparRotaDoMapa();
     info.classList.add('hidden');
     const chave = `rota_${numLinha}_${sentido}`;
     let dados;
@@ -96,7 +97,6 @@ async function carregarRota(forcar = false) {
         if (!pontos.length) return info.innerHTML += `<p class="text-red-600">Nenhum ponto encontrado</p>`;
 
         const coords = pontos.map(p => [parseFloat(p.latitude), parseFloat(p.longitude)]);
-        if (rotaDesenhada) mapa.removeLayer(rotaDesenhada);
         rotaDesenhada = L.polyline(coords, { color: '#2563eb', weight: 5 }).addTo(mapa);
         mapa.fitBounds(rotaDesenhada.getBounds());
         info.innerHTML += `<p>Linha ${numLinha} - ${sentido}<br>Pontos: ${pontos.length}</p>`;
@@ -108,15 +108,22 @@ async function carregarRota(forcar = false) {
     }
 }
 
+function limparRotaDoMapa() {
+    if (rotaDesenhada) {
+        mapa.removeLayer(rotaDesenhada);
+        rotaDesenhada = null;
+    }
+    document.getElementById("info-rota").classList.add('hidden');
+}
+
 // ==============================================
-// 🚨 DESVIOS COM RAIO DE ALCANCE
+// 🚨 DESVIOS COM RAIO + EDITAR
 // ==============================================
 function desenharDesvio(d) {
     const cor = d.tipo === 'provisorio' ? '#F57C00' : '#D32F2F';
     const icone = ICONE_POR_MOTIVO[d.motivo] || ICONE_POR_MOTIVO["Padrão"];
     const raio = d.raio ? Number(d.raio) : 100;
 
-    // Círculo mostrando a área afetada
     const circulo = L.circle([d.lat, d.lng], {
         color: cor,
         fillColor: cor,
@@ -126,7 +133,6 @@ function desenharDesvio(d) {
     }).addTo(mapa);
     camadasDesvios.push(circulo);
 
-    // Ícone no centro
     const marcador = L.marker([d.lat, d.lng], {
         icon: L.divIcon({
             className: 'icone-desvio',
@@ -142,9 +148,50 @@ function desenharDesvio(d) {
         <strong>Raio afetado:</strong> ${raio} metros<br>
         <strong>Linhas:</strong> ${d.linhas_afetadas}<br>
         <strong>Horário:</strong> ${d.horario_inicio} às ${d.horario_final}<br>
-        <button onclick="removerDesvio(${d.id})" style="color:red; font-size:11px; margin-top:5px;">❌ Remover</button>
+        <div class="flex gap-1 mt-2">
+            <button onclick="editarDesvio(${d.id})" style="color:blue; font-size:11px;">✏️ Editar</button>
+            <button onclick="removerDesvio(${d.id})" style="color:red; font-size:11px;">❌ Remover</button>
+        </div>
     `);
     camadasDesvios.push(marcador);
+}
+
+async function editarDesvio(id) {
+    const desvio = todosOsDesvios.find(d => d.id === id);
+    if (!desvio) return;
+
+    // Preenche formulário com dados existentes
+    document.getElementById('id-editar').value = desvio.id;
+    document.getElementById('titulo-cadastro').innerHTML = '<i class="fa fa-pencil mr-2"></i> Editar Desvio';
+    document.querySelector(`input[name="tipo-desvio"][value="${desvio.tipo}"]`).checked = true;
+    document.getElementById('lat-desvio').value = desvio.lat;
+    document.getElementById('lng-desvio').value = desvio.lng;
+    document.getElementById('raio-desvio').value = desvio.raio;
+    document.getElementById('linhas-afetadas').value = desvio.linhas_afetadas;
+    document.getElementById('motivo-lista').value = desvio.motivo;
+    document.getElementById('motivo-desvio').value = desvio.motivo;
+    document.getElementById('horario-inicio').value = desvio.horario_inicio;
+    document.getElementById('horario-final').value = desvio.horario_final;
+    document.getElementById('btn-salvar-desvio').textContent = '💾 Atualizar Desvio';
+    document.getElementById('btn-cancelar-edicao').classList.remove('hidden');
+    pontoClicado = { lat: desvio.lat, lng: desvio.lng };
+
+    // Rola até o formulário
+    document.querySelector('.bg-white.rounded-xl.shadow-md.p-5').scrollIntoView({behavior:'smooth'});
+}
+
+function cancelarEdicao() {
+    document.getElementById('id-editar').value = '';
+    document.getElementById('titulo-cadastro').innerHTML = '<i class="fa fa-exclamation-triangle mr-2"></i> Cadastrar Desvio';
+    document.getElementById('raio-desvio').value = '100';
+    document.getElementById('linhas-afetadas').value = '';
+    document.getElementById('motivo-lista').value = '';
+    document.getElementById('motivo-desvio').value = '';
+    document.getElementById('horario-inicio').value = '';
+    document.getElementById('horario-final').value = '';
+    document.getElementById('btn-salvar-desvio').textContent = '✅ Salvar Desvio';
+    document.getElementById('btn-cancelar-edicao').classList.add('hidden');
+    pontoClicado = null;
 }
 
 function atualizarListaMotivos() {
@@ -198,7 +245,10 @@ function aplicarFiltros() {
                     </strong>
                     <div class="text-gray-600">${d.motivo} | Raio: ${d.raio||100}m | ${d.horario_inicio} - ${d.horario_final}</div>
                 </div>
-                <button onclick="removerDesvio(${d.id})" class="text-red-500 font-bold">X</button>
+                <div class="flex flex-col gap-1">
+                    <button onclick="editarDesvio(${d.id})" class="text-blue-500 text-xs">✏️</button>
+                    <button onclick="removerDesvio(${d.id})" class="text-red-500 text-xs">❌</button>
+                </div>
             </div>
         `;
         desenharDesvio(d);
@@ -212,6 +262,7 @@ async function salvarDesvio() {
     const motivoDigitado = document.getElementById('motivo-desvio').value.trim();
     const motivoFinal = motivoEscolhido || motivoDigitado || 'Sem informação';
     const raioValor = Number(document.getElementById('raio-desvio').value) || 100;
+    const idEditar = document.getElementById('id-editar').value;
 
     const dados = {
         tipo: document.querySelector('input[name="tipo-desvio"]:checked').value,
@@ -221,27 +272,30 @@ async function salvarDesvio() {
         linhas_afetadas: document.getElementById('linhas-afetadas').value.trim(),
         motivo: motivoFinal,
         horario_inicio: document.getElementById('horario-inicio').value || 'Não informado',
-        horario_final: document.getElementById('horario-final').value || 'Não informado',
-        data_cadastro: new Date()
+        horario_final: document.getElementById('horario-final').value || 'Não informado'
     };
     if (!dados.linhas_afetadas) return alert("Informe as linhas afetadas!");
 
-    await supabaseClient.from('desvios').insert([dados]);
-    alert("✅ Desvio cadastrado!");
-    
-    document.getElementById('raio-desvio').value = '100';
-    document.getElementById('linhas-afetadas').value = '';
-    document.getElementById('motivo-lista').value = '';
-    document.getElementById('motivo-desvio').value = '';
-    document.getElementById('horario-inicio').value = '';
-    document.getElementById('horario-final').value = '';
-    pontoClicado = null;
-
-    await carregarDesvios();
+    try {
+        if (idEditar) {
+            // MODO EDIÇÃO
+            await supabaseClient.from('desvios').update(dados).eq('id', idEditar);
+            alert("✅ Desvio atualizado!");
+        } else {
+            // MODO CADASTRO NOVO
+            dados.data_cadastro = new Date();
+            await supabaseClient.from('desvios').insert([dados]);
+            alert("✅ Desvio cadastrado!");
+        }
+        cancelarEdicao();
+        await carregarDesvios();
+    } catch (erro) {
+        alert("❌ Erro: " + erro.message);
+    }
 }
 
 async function removerDesvio(id) {
-    if (!confirm("Remover este desvio?")) return;
+    if (!confirm("Remover este desvio permanentemente?")) return;
     await supabaseClient.from('desvios').delete().eq('id', id);
     await carregarDesvios();
 }
@@ -292,20 +346,27 @@ document.addEventListener("keydown", (e) => {
 });
 
 // ==============================================
-// 🚀 INICIALIZAÇÃO
+// 🚀 INICIALIZAÇÃO GERAL
 // ==============================================
 window.onload = () => {
     carregarDesvios();
 
+    // Botões de Rota
     document.getElementById('btn-carregar-rota').onclick = () => carregarRota(false);
     document.getElementById('btn-atualizar-rota').onclick = () => carregarRota(true);
+    document.getElementById('btn-limpar-rota').onclick = limparRotaDoMapa;
+
+    // Botões de Desvio
     document.getElementById('btn-salvar-desvio').onclick = salvarDesvio;
+    document.getElementById('btn-cancelar-edicao').onclick = cancelarEdicao;
+    window.editarDesvio = editarDesvio;
     window.removerDesvio = removerDesvio;
 
     document.getElementById('motivo-lista').addEventListener('change', e => {
         document.getElementById('motivo-desvio').value = e.target.value;
     });
 
+    // Filtros
     document.querySelectorAll('input[name="filtro-tipo"]').forEach(radio => {
         radio.addEventListener('change', () => {
             filtroAtual.tipo = document.querySelector('input[name="filtro-tipo"]:checked').value;
