@@ -6,7 +6,7 @@ const SUPABASE_KEY = "sb_publishable_wpT3O6lz7Hr5IkxN9sTIwA_FEHD7wZc";
 const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 // ==============================================
-// 📝 MOTIVOS E ÍCONES
+// 📝 MOTIVOS E ÍCONES PERSONALIZADOS
 // ==============================================
 const MOTIVOS_PADRAO = [
     "Colisão", "Obra da Cagece", "Serviço Enel", "Feira", "Manifestação",
@@ -117,7 +117,7 @@ function limparRotaDoMapa() {
 }
 
 // ==============================================
-// 🚨 DESVIOS COM DETALHES E SALVAMENTO CORRIGIDO
+// 🚨 DESVIOS COM ÍCONES DE TAMANHO DINÂMICO POR ZOOM
 // ==============================================
 function desenharDesvio(d) {
     const cor = d.tipo === 'provisorio' ? '#F57C00' : '#D32F2F';
@@ -133,14 +133,36 @@ function desenharDesvio(d) {
     }).addTo(mapa);
     camadasDesvios.push(circulo);
 
+    // Tamanho do ícone se ajusta automaticamente ao zoom
+    const tamanhoBase = 24;
+    const tamanhoMinimo = 14;
+    const tamanhoMaximo = 32;
+    let tamanhoAtual = tamanhoBase;
+
     const marcador = L.marker([d.lat, d.lng], {
         icon: L.divIcon({
             className: 'icone-desvio',
-            html: `<div style="font-size:22px; text-shadow: 1px 1px 2px rgba(0,0,0,0.5);">${icone}</div>`,
-            iconSize: [28, 28],
-            iconAnchor: [14, 14]
+            html: `<div id="icone-${d.id}" style="font-size:${tamanhoAtual}px; text-shadow: 1px 1px 2px rgba(0,0,0,0.5); white-space: nowrap;">${icone}</div>`,
+            iconSize: [tamanhoAtual + 4, tamanhoAtual + 4],
+            iconAnchor: [(tamanhoAtual + 4)/2, (tamanhoAtual + 4)/2]
         })
     }).addTo(mapa);
+
+    // Atualiza tamanho sempre que mudar o zoom
+    mapa.on('zoomend', () => {
+        const nivelZoom = mapa.getZoom();
+        tamanhoAtual = Math.max(tamanhoMinimo, Math.min(tamanhoMaximo, nivelZoom * 1.8));
+        const el = document.getElementById(`icone-${d.id}`);
+        if (el) {
+            el.style.fontSize = `${tamanhoAtual}px`;
+            marcador.setIcon(L.divIcon({
+                className: 'icone-desvio',
+                html: el.outerHTML,
+                iconSize: [tamanhoAtual + 4, tamanhoAtual + 4],
+                iconAnchor: [(tamanhoAtual + 4)/2, (tamanhoAtual + 4)/2]
+            }));
+        }
+    });
 
     const detalhesHtml = d.detalhes ? `<br><strong>Detalhes:</strong> ${d.detalhes}` : '';
 
@@ -260,7 +282,6 @@ function aplicarFiltros() {
     });
 }
 
-// ✅ FUNÇÃO DE SALVAR COM TODAS AS CORREÇÕES
 async function salvarDesvio() {
     if (!pontoClicado) return alert("❗ Clique primeiro no mapa para definir o local!");
 
@@ -334,29 +355,32 @@ mapa.on('click', e => {
 });
 
 // ==============================================
-// 🖥️ TELA CHEIA
+// 🖥️ TELA CHEIA - CORRIGIDA 100%
 // ==============================================
 const containerMapa = document.querySelector(".lg\\:col-span-3");
 const btnTelaCheia = document.getElementById("btn-tela-cheia");
+const mapaElemento = document.getElementById("mapa");
 let modoCheio = false;
 
 function alternarTelaCheia() {
     if (!modoCheio) {
-        containerMapa.classList.add("fixed", "inset-0", "z-[9999]", "rounded-none", "w-full", "h-full");
+        // Entra em tela cheia
+        containerMapa.classList.add("fixed", "inset-0", "z-[99999]", "rounded-none", "w-screen", "h-screen");
         containerMapa.classList.remove("lg:col-span-3");
-        document.getElementById("mapa").style.height = "100vh";
-        document.getElementById("mapa").style.width = "100vw";
+        mapaElemento.style.width = "100vw";
+        mapaElemento.style.height = "100vh";
         btnTelaCheia.innerHTML = `<i class="fa fa-compress text-primary"></i> <span class="ml-1 text-xs font-medium">Voltar</span>`;
         modoCheio = true;
-        setTimeout(() => mapa.invalidateSize({ animate: false }), 50);
+        setTimeout(() => mapa.invalidateSize({ animate: false }), 100);
     } else {
-        containerMapa.classList.remove("fixed", "inset-0", "z-[9999]", "rounded-none", "w-full", "h-full");
+        // Sai da tela cheia
+        containerMapa.classList.remove("fixed", "inset-0", "z-[99999]", "rounded-none", "w-screen", "h-screen");
         containerMapa.classList.add("lg:col-span-3");
-        document.getElementById("mapa").style.height = "75vh";
-        document.getElementById("mapa").style.width = "100%";
+        mapaElemento.style.width = "100%";
+        mapaElemento.style.height = "75vh";
         btnTelaCheia.innerHTML = `<i class="fa fa-expand text-primary"></i> <span class="ml-1 text-xs font-medium">Tela Cheia</span>`;
         modoCheio = false;
-        setTimeout(() => mapa.invalidateSize({ animate: false }), 50);
+        setTimeout(() => mapa.invalidateSize({ animate: false }), 100);
     }
 }
 
