@@ -44,6 +44,25 @@ let camadasDesvios = [], pontoClicado = null;
 let todosOsDesvios = [];
 let filtroAtual = { tipo: 'todos', motivo: '', linha: '' };
 
+// ✅ NOVO: Círculo de pré-visualização do local
+let circuloPreVisualizacao = null;
+
+function atualizarPreVisualizacaoRaio() {
+    if (!pontoClicado) return;
+    const raio = Number(document.getElementById('raio-desvio').value) || 100;
+    
+    if (circuloPreVisualizacao) mapa.removeLayer(circuloPreVisualizacao);
+    
+    circuloPreVisualizacao = L.circle([pontoClicado.lat, pontoClicado.lng], {
+        color: '#2563eb',
+        fillColor: '#2563eb',
+        fillOpacity: 0.15,
+        radius: raio,
+        weight: 2,
+        dashArray: '5 5' // Linha tracejada para diferenciar
+    }).addTo(mapa);
+}
+
 // ==============================================
 // 🔄 BUSCA E LIMPEZA DE ROTAS
 // ==============================================
@@ -117,7 +136,7 @@ function limparRotaDoMapa() {
 }
 
 // ==============================================
-// 🚨 DESVIOS COM ÍCONES DE TAMANHO DINÂMICO POR ZOOM
+// 🚨 DESVIOS COM ÍCONES DINÂMICOS
 // ==============================================
 function desenharDesvio(d) {
     const cor = d.tipo === 'provisorio' ? '#F57C00' : '#D32F2F';
@@ -133,7 +152,6 @@ function desenharDesvio(d) {
     }).addTo(mapa);
     camadasDesvios.push(circulo);
 
-    // Tamanho do ícone se ajusta automaticamente ao zoom
     const tamanhoBase = 24;
     const tamanhoMinimo = 14;
     const tamanhoMaximo = 32;
@@ -148,7 +166,6 @@ function desenharDesvio(d) {
         })
     }).addTo(mapa);
 
-    // Atualiza tamanho sempre que mudar o zoom
     mapa.on('zoomend', () => {
         const nivelZoom = mapa.getZoom();
         tamanhoAtual = Math.max(tamanhoMinimo, Math.min(tamanhoMaximo, nivelZoom * 1.8));
@@ -200,7 +217,8 @@ async function editarDesvio(id) {
     document.getElementById('btn-salvar-desvio').textContent = '💾 Atualizar Desvio';
     document.getElementById('btn-cancelar-edicao').classList.remove('hidden');
     pontoClicado = { lat: desvio.lat, lng: desvio.lng };
-
+    
+    atualizarPreVisualizacaoRaio();
     document.querySelector('.bg-white.rounded-xl.shadow-md.p-5').scrollIntoView({behavior:'smooth'});
 }
 
@@ -218,6 +236,11 @@ function cancelarEdicao() {
     document.getElementById('btn-salvar-desvio').textContent = '✅ Salvar Desvio';
     document.getElementById('btn-cancelar-edicao').classList.add('hidden');
     pontoClicado = null;
+    
+    if (circuloPreVisualizacao) {
+        mapa.removeLayer(circuloPreVisualizacao);
+        circuloPreVisualizacao = null;
+    }
 }
 
 function atualizarListaMotivos() {
@@ -348,14 +371,16 @@ async function carregarDesvios() {
     aplicarFiltros();
 }
 
+// ✅ Atualiza o círculo quando clica no mapa
 mapa.on('click', e => {
     pontoClicado = { lat: e.latlng.lat, lng: e.latlng.lng };
     document.getElementById('lat-desvio').value = e.latlng.lat.toFixed(6);
     document.getElementById('lng-desvio').value = e.latlng.lng.toFixed(6);
+    atualizarPreVisualizacaoRaio();
 });
 
 // ==============================================
-// 🖥️ TELA CHEIA - CORRIGIDA 100%
+// 🖥️ TELA CHEIA - CORRIGIDA
 // ==============================================
 const containerMapa = document.querySelector(".lg\\:col-span-3");
 const btnTelaCheia = document.getElementById("btn-tela-cheia");
@@ -364,7 +389,6 @@ let modoCheio = false;
 
 function alternarTelaCheia() {
     if (!modoCheio) {
-        // Entra em tela cheia
         containerMapa.classList.add("fixed", "inset-0", "z-[99999]", "rounded-none", "w-screen", "h-screen");
         containerMapa.classList.remove("lg:col-span-3");
         mapaElemento.style.width = "100vw";
@@ -373,7 +397,6 @@ function alternarTelaCheia() {
         modoCheio = true;
         setTimeout(() => mapa.invalidateSize({ animate: false }), 100);
     } else {
-        // Sai da tela cheia
         containerMapa.classList.remove("fixed", "inset-0", "z-[99999]", "rounded-none", "w-screen", "h-screen");
         containerMapa.classList.add("lg:col-span-3");
         mapaElemento.style.width = "100%";
@@ -407,6 +430,9 @@ window.onload = () => {
     document.getElementById('motivo-lista').addEventListener('change', e => {
         document.getElementById('motivo-desvio').value = e.target.value;
     });
+
+    // ✅ Atualiza o círculo automaticamente quando altera o valor do raio
+    document.getElementById('raio-desvio').addEventListener('input', atualizarPreVisualizacaoRaio);
 
     document.querySelectorAll('input[name="filtro-tipo"]').forEach(radio => {
         radio.addEventListener('change', () => {
